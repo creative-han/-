@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>今天吃什麼？ - 雲科美食推薦系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root { --primary: #ff6b6b; --secondary: #4ecdc4; }
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: #f7f7f7; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h1 { text-align: center; color: var(--primary); margin-top: 0; }
+        .filter-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; box-sizing: border-box; }
+        .checkbox-label { display: flex; align-items: center; font-weight: bold; cursor: pointer; color: #e15f41; background: #ffeaa7; padding: 10px; border-radius: 8px; border: 1px dashed #e15f41; }
+        .checkbox-label input { margin-right: 10px; width: 18px; height: 18px; cursor: pointer; }
+        button.btn-primary { background: var(--primary); color: white; border: none; cursor: pointer; margin-top: 15px; transition: 0.3s; font-weight: bold; font-size: 18px; padding: 12px; }
+        button.btn-primary:hover:not(:disabled) { background: #ee5253; transform: scale(1.02); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        #sync-status { text-align: center; font-weight: bold; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+        .status-loading { background: #fff3e0; color: #d35400; border: 2px dashed #f39c12; }
+        .status-success { background: #e8f8f5; color: #27ae60; border: 2px dashed #2ecc71; }
+        .status-error { background: #fdedec; color: #c0392b; border: 2px dashed #e74c3c; }
+        #result-area { margin-top: 30px; text-align: center; min-height: 100px; border: 2px dashed #eee; border-radius: 10px; padding: 15px; }
+        .store-card { animation: popIn 0.5s ease-out; text-align: left; padding: 10px; }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .badge { display: inline-block; padding: 4px 8px; background: #eee; border-radius: 5px; font-size: 13px; margin: 3px 3px 3px 0; font-weight: bold; }
+        .type-zh { background: #ffeaa7; color: #d35400; }
+        .type-west { background: #fab1a0; color: #c0392b; }
+        .type-jp { background: #a29bfe; color: #fff; }
+        .type-drink { background: #81ecec; color: #008080; }
+        .type-other { background: #55efc4; color: #00b894; }
+        .info-text { font-size: 14px; color: #555; margin: 6px 0; line-height: 1.4; }
+        .status-open { color: #27ae60; font-weight: bold; }
+        .status-closed { color: #e74c3c; font-weight: bold; }
+        .map-btn { display: block; text-align: center; margin-top: 10px; background: white; color: var(--secondary); text-decoration: none; font-size: 15px; font-weight: bold; border: 2px solid var(--secondary); padding: 8px 10px; border-radius: 8px; transition: 0.2s; }
+        .map-btn:hover { background: var(--secondary); color: white; }
+        .map-container { margin-top: 15px; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍴 今天吃什麼？</h1>
+
+    <div id="sync-status" class="status-loading">
+        ⏳ 正在同步 Google 線上試算表...
+    </div>
+    
+    <label class="checkbox-label" style="margin-bottom: 15px;">
+        <input type="checkbox" id="onlyOpenNow" checked>
+        🟢 僅推薦「現在有營業」的店家
+    </label>
+
+    <div class="filter-group">
+        <label>距離範圍 📍 (需允許定位)</label>
+        <select id="distance">
+            <option value="all">不限距離</option>
+            <option value="0.5">500公尺內 (走路)</option>
+            <option value="1">1公里內 (騎車)</option>
+            <option value="3">3公里內 (開車)</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label>用餐時段 ⏰</label>
+        <select id="mealTime">
+            <option value="all">不限時段</option>
+            <option value="早餐">早餐</option>
+            <option value="午餐">午餐</option>
+            <option value="晚餐">晚餐</option>
+            <option value="宵夜">宵夜</option>
+            <option value="飲料">飲料 / 點心</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label>預算範圍 💰</label>
+        <select id="price">
+            <option value="all">不限預算</option>
+            <option value="100">100元以內</option>
+            <option value="200">200元以內</option>
+            <option value="300">300元以內</option>
+            <option value="500">500元以內</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label>料理類型 🍜</label>
+        <select id="type">
+            <option value="all">不限類型</option>
+            <option value="中式">中式</option>
+            <option value="西式">西式</option>
+            <option value="日式">日式</option>
+            <option value="其他異國料理">其他異國料理</option>
+            <option value="飲料">飲料</option>
+        </select>
+    </div>
+
+    <button id="btn-draw" class="btn-primary" onclick="startPickProcess()" disabled>幫我決定！ (隨機抽取)</button>
+
+    <div id="result-area">
+        <p style="color: #999;">等待線上資料同步...</p>
+    </div>
+</div>
+
+<script>
+    // 使用 Google 試算表發佈連結
+    const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRgR-xVrt0xrqEnRSjwGU9_En5SlueYShf4GNZ5nJJPAFmNdwblLCeb9GmhcaRWmmvK3Gd3biuAcaA2/pub?output=csv";
+
+    let stores = [];
+
+    window.onload = function() {
+        Papa.parse(GOOGLE_SHEET_CSV_URL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                processData(results.data);
+            },
+            error: function(err) {
+                const statusDiv = document.getElementById('sync-status');
+                statusDiv.className = 'status-error';
+                statusDiv.innerHTML = "❌ 線上資料同步失敗，請確認網路或連結。";
+            }
+        });
+    };
+
+    function processData(rawData) {
+        stores = [];
+        const dayMap = {
+            'Monday': '星期一', 'Tuesday': '星期二', 'Wednesday': '星期三',
+            'Thursday': '星期四', 'Friday': '星期五', 'Saturday': '星期六', 'Sunday': '星期日'
+        };
+
+        const cleanTime = (t) => {
+            if (!t || t.trim() === '') return null;
+            return t.trim().substring(0, 5);
+        };
+
+        rawData.forEach(row => {
+            // 過濾無效名稱的空白列
+            const storeName = row.name ? row.name.trim() : '';
+            if (!storeName || storeName === '' || storeName.toLowerCase() === 'nan') return;
+
+            const t1_open = cleanTime(row.open_time_1);
+            const t1_close = cleanTime(row.close_time_1);
+            const t2_open = cleanTime(row.open_time_2);
+            const t2_close = cleanTime(row.close_time_2);
+
+            let times_str = [];
+            if (t1_open && t1_close) times_str.push(`${t1_open}-${t1_close}`);
+            if (t2_open && t2_close) times_str.push(`${t2_open}-${t2_close}`);
+            
+            let raw_closed = [];
+            if (row.closed_days_1) raw_closed.push(row.closed_days_1.trim());
+            if (row.closed_days_2) raw_closed.push(row.closed_days_2.trim());
+            if (row.closed_days_3) raw_closed.push(row.closed_days_3.trim());
+
+            let meals = [];
+            if (row.meal_time_1) meals.push(row.meal_time_1.trim());
+            if (row.meal_time_2) meals.push(row.meal_time_2.trim());
+            if (row.meal_time_3) meals.push(row.meal_time_3.trim());
+
+            stores.push({
+                name: storeName,
+                type: row.type ? row.type.trim() : '其他',
+                price_level: parseInt(row['price_level (均消預算)']) || 100,
+                meal_times: meals,
+                rating: parseFloat(row.rating) || 0,
+                open: times_str.length > 0 ? times_str.join(", ") : "未提供",
+                closed: raw_closed.length > 0 ? raw_closed.map(c => dayMap[c] || c).join(", ") : "無",
+                raw_open_1: t1_open,
+                raw_close_1: t1_close,
+                raw_open_2: t2_open,
+                raw_close_2: t2_close,
+                raw_closed_days: raw_closed,
+                lat: parseFloat(row['lat(緯度)']),
+                lng: parseFloat(row['lng(經度)']),
+                map_link: row.map_link || ""
+            });
+        });
+
+        // 修改這裡：不再顯示筆數，只顯示「✅ 已成功同步」
+        const statusDiv = document.getElementById('sync-status');
+        statusDiv.className = 'status-success';
+        statusDiv.innerHTML = `✅ 已成功同步`;
+        document.getElementById('btn-draw').disabled = false;
+        document.getElementById('result-area').innerHTML = "<p style='color: #999;'>同步完成，設定條件後即可隨機推薦</p>";
+    }
+
+    function checkIsOpenNow(store) {
+        if (!store.raw_open_1 && !store.raw_open_2) return true;
+        const now = new Date();
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const currentDay = now.getDay();
+        const prevDay = (currentDay + 6) % 7;
+        const currentT = now.getHours() * 60 + now.getMinutes();
+        
+        const checkRange = (o, c, dayIndex) => {
+            if (!o || !c) return false;
+            const ot = parseInt(o.split(':')[0])*60 + parseInt(o.split(':')[1]);
+            const ct = parseInt(c.split(':')[0])*60 + parseInt(c.split(':')[1]);
+            
+            // 是否在公休日
+            if (store.raw_closed_days.includes(dayNames[dayIndex])) return false;
+
+            if (ot <= ct) {
+                // 一般時段
+                return currentT >= ot && currentT < ct;
+            } else {
+                // 跨夜時段 (如 22:00 - 02:00)
+                // 今天晚上十點後 OR 昨晚開到今天凌晨
+                const isLateNightToday = currentT >= ot;
+                const isEarlyMorningYesterday = currentT < ct;
+                
+                if (isLateNightToday) return true;
+                if (isEarlyMorningYesterday) {
+                    // 檢查「昨天」是否公休
+                    return !store.raw_closed_days.includes(dayNames[prevDay]);
+                }
+                return false;
+            }
+        };
+        return checkRange(store.raw_open_1, store.raw_close_1, currentDay) || 
+               checkRange(store.raw_open_2, store.raw_close_2, currentDay);
+    }
+
+    function startPickProcess() {
+        const distLimit = document.getElementById('distance').value;
+        const resultArea = document.getElementById('result-area');
+        if (distLimit !== 'all') {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => executePick(pos.coords.latitude, pos.coords.longitude, parseFloat(distLimit)),
+                () => { resultArea.innerHTML = "<p style='color:red;'>無法定位，請選擇「不限距離」</p>"; }
+            );
+        } else executePick(null, null, null);
+    }
+
+    function executePick(lat, lng, limit) {
+        const meal = document.getElementById('mealTime').value;
+        const price = document.getElementById('price').value;
+        const type = document.getElementById('type').value;
+        const onlyOpen = document.getElementById('onlyOpenNow').checked;
+
+        let filtered = stores.filter(s => {
+            const mMatch = (meal === "all" || s.meal_times.includes(meal));
+            const pMatch = (price === "all" || s.price_level <= parseInt(price));
+            const tMatch = (type === "all" || s.type === type);
+            const oMatch = !onlyOpen || checkIsOpenNow(s);
+            let dMatch = true;
+            if (limit && lat && lng) {
+                if (!s.lat || !s.lng || isNaN(s.lat) || isNaN(s.lng)) return false;
+                const d = Math.acos(Math.sin(lat*Math.PI/180)*Math.sin(s.lat*Math.PI/180)+Math.cos(lat*Math.PI/180)*Math.cos(s.lat*Math.PI/180)*Math.cos((s.lng-lng)*Math.PI/180))*6371;
+                dMatch = d <= limit;
+                s.distStr = d < 1 ? Math.round(d*1000)+"m" : d.toFixed(1)+"km";
+            }
+            return mMatch && pMatch && tMatch && oMatch && dMatch;
+        });
+
+        const resultArea = document.getElementById('result-area');
+        if (filtered.length === 0) {
+            resultArea.innerHTML = "<p style='color:red;'>哎呀！目前時段無符合條件的店家</p>";
+            return;
+        }
+
+        resultArea.innerHTML = "<p style='color: var(--primary); font-weight: bold;'>正在精挑細選中... 🎲</p>";
+
+        setTimeout(() => {
+            const pick = filtered[Math.floor(Math.random() * filtered.length)];
+            const isOpen = checkIsOpenNow(pick);
+            
+            let typeClass = "type-other";
+            if(pick.type === "中式") typeClass = "type-zh";
+            if(pick.type === "西式") typeClass = "type-west";
+            if(pick.type === "日式") typeClass = "type-jp";
+            if(pick.type === "飲料") typeClass = "type-drink";
+
+            // 徹底修復：使用 Google Maps 官方標準嵌入網址格式
+            const embedMapUrl = `https://maps.google.com/maps?q=${pick.lat},${pick.lng}&hl=zh-TW&z=16&output=embed`;
+
+            resultArea.innerHTML = `
+                <div class="store-card">
+                    <h2 style="text-align:center; color:var(--primary); margin-bottom: 5px;">${pick.name}</h2>
+                    <div style="text-align:center; margin-bottom: 10px;">
+                        <span class="badge">⭐ ${pick.rating}</span>
+                        <span class="badge ${typeClass}">🍽️ ${pick.type}</span>
+                        <span class="badge">💰 ~${pick.price_level}元</span>
+                        ${pick.distStr ? `<span class="badge">📍 距離 ${pick.distStr}</span>` : ""}
+                    </div>
+                    <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-top:10px;">
+                        <p class="info-text">💡 狀態：${isOpen ? "<span class='status-open'>🟢 現在營業中</span>" : "<span class='status-closed'>🔴 目前休息中</span>"}</p>
+                        <p class="info-text">🕒 時間：${pick.open}</p>
+                        <p class="info-text">🛑 公休：${pick.closed}</p>
+                    </div>
+                    ${(pick.lat && pick.lng && !isNaN(pick.lat)) ? `
+                    <div class="map-container">
+                        <iframe width="100%" height="220" frameborder="0" src="${embedMapUrl}"></iframe>
+                    </div>` : ""}
+                    ${pick.map_link ? `<a class="map-btn" href="${pick.map_link}" target="_blank">↗️ 開啟 Google 地圖導航</a>` : ""}
+                </div>
+            `;
+        }, 600);
+    }
+</script>
+</body>
+</html>
+
+
