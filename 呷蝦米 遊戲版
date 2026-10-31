@@ -415,6 +415,43 @@
         .gacha-shaking {
             animation: gachaShake 0.6s ease-in-out infinite;
         }
+
+        /* 階段 C 新增：手繪拍立得美食相框與紙膠帶樣式 */
+        .polaroid-frame {
+            background: #FFFDF9;
+            border: 2.2px solid var(--line-brown);
+            border-radius: 16px;
+            padding: 8px 8px 12px 8px;
+            box-shadow: 0 4px 0px #DFD5C6;
+            position: relative;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .polaroid-frame:hover {
+            transform: rotate(-1deg) scale(1.02);
+        }
+        .polaroid-tape {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%) rotate(2deg);
+            width: 64px;
+            height: 16px;
+            background: rgba(252, 232, 166, 0.9);
+            border: 1.5px dashed var(--line-brown);
+            border-radius: 3px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* 小鎮日夜氛圍濾鏡 */
+        .town-time-sunset .leaflet-image-layer {
+            filter: sepia(0.28) saturate(1.35) hue-rotate(-12deg) brightness(0.96);
+            transition: filter 0.5s ease;
+        }
+        .town-time-night .leaflet-image-layer {
+            filter: brightness(0.72) contrast(1.08) saturate(0.88) hue-rotate(185deg);
+            transition: filter 0.5s ease;
+        }
     </style>
 </head>
 <body class="relative pt-5 pb-28 sm:py-6 px-3.5 sm:px-6 lg:px-8 flex flex-col items-center">
@@ -1373,6 +1410,7 @@
                     <div class="flex flex-wrap gap-2" id="pokedex-filter-group">
                         <button type="button" onclick="setPokedexFilter('all', this)" class="capsule-btn active">全部店家</button>
                         <button type="button" onclick="setPokedexFilter('stamped', this)" class="capsule-btn">已蓋完食章</button>
+                        <button type="button" onclick="setPokedexFilter('photo', this)" class="capsule-btn">拍立得相簿</button>
                         <button type="button" onclick="setPokedexFilter('unstamped', this)" class="capsule-btn">尚未探索</button>
                         <button type="button" onclick="setPokedexFilter('fav', this)" class="capsule-btn">我的口袋收藏</button>
                         <button type="button" onclick="setPokedexFilter('custom', this)" class="capsule-btn">私房新增店家</button>
@@ -1461,9 +1499,17 @@
                 <!-- 交通工具區 -->
                 <section class="sumikko-card p-5 sm:p-6 bg-white">
                     <h3 class="text-base sm:text-lg font-black text-[#5C4938] mb-3 flex items-center gap-2">
-                        <span>🚗 蝦米小鎮專屬交通工具（套用後「你的所在地」地標會搭乘專屬座駕！）</span>
+                        <span>🚗 蝦米小鎮專屬交通工具（購買後會在小鎮街道巡遊兜風！）</span>
                     </h3>
                     <div id="shop-vehicles-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+                </section>
+
+                <!-- 階段 C 新增：小鎮景觀與遊樂場裝飾設施區 -->
+                <section class="sumikko-card p-5 sm:p-6 bg-white">
+                    <h3 class="text-base sm:text-lg font-black text-[#5C4938] mb-3 flex items-center gap-2">
+                        <span>🎡 蝦米小鎮景觀與遊樂場設施（購買後可擺進小鎮地圖自由拖曳裝飾！）</span>
+                    </h3>
+                    <div id="shop-decors-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
                 </section>
             </div>
         </div>
@@ -1473,32 +1519,50 @@
             <section class="sumikko-card p-5 sm:p-6 bg-white">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
-                        <h2 class="text-lg sm:text-xl font-black text-[#5C4938] flex items-center gap-2">
+                        <h2 class="text-lg sm:text-xl font-black text-[#5C4938] flex items-center gap-2 flex-wrap">
                             <span>蝦米小鎮美食大冒險地圖</span>
-                            <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#FCE8A6] border-2 border-[#5C4938]">阿蝦與米米的世界</span>
+                            <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#FCE8A6] border-2 border-[#5C4938]">自由裝潢你的小鎮</span>
                         </h2>
-                        <p class="text-xs font-bold text-[#857262] mt-0.5">你解鎖的「吉祥物小夥伴」與「交通工具」都會出現在小鎮裡喔！可自由拖曳擺放他們的位置，或讓車車在街上巡遊～</p>
+                        <p class="text-xs font-bold text-[#857262] mt-0.5">你解鎖的「吉祥物小夥伴」、「交通工具」與「遊樂場景觀設施」都能擺進小鎮裡！直接用滑鼠或手指拖曳即可佈置專屬小鎮～</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
+                        <!-- 階段 C 新增：小鎮日夜氛圍切換 -->
+                        <button type="button" id="btn-town-time" onclick="cycleTownAtmosphere()" class="capsule-btn bg-[#FCE8A6] text-xs">
+                            <span id="btn-town-time-text">🌤️ 暖陽白天</span>
+                        </button>
                         <button type="button" id="btn-toggle-cruise" onclick="toggleTownVehicleCruise()" class="capsule-btn bg-[#F9C5BD] text-xs">
                             <span id="btn-toggle-cruise-text">車車巡遊中 (點我暫停)</span>
                         </button>
-                        <button type="button" onclick="centerMapOnYunTech()" class="capsule-btn bg-[#FCE8A6] text-xs">
-                            <span>回到蝦米小鎮中心</span>
+                        <button type="button" onclick="centerMapOnYunTech()" class="capsule-btn bg-white text-xs">
+                            <span>回小鎮中心</span>
                         </button>
                         <button type="button" onclick="locateUserOnFullMap()" class="capsule-btn bg-[#A8D8B9] text-xs">
-                            <span>定位我的目前位置</span>
+                            <span>定位我</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- 小鎮居民與車車狀態列 -->
-                <div class="sumikko-card-sm bg-[#FAF6F0] px-3.5 py-2.5 mb-3 flex flex-wrap items-center justify-between gap-2 text-xs font-black text-[#5C4938]">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="px-2.5 py-0.5 rounded-full bg-[#FCE8A6] border border-[#5C4938]">小鎮生活動態</span>
-                        <span id="town-life-summary">目前有 2 位小夥伴與 0 台交通工具在小鎮裡散步兜風（可直接用滑鼠/手指拖曳擺放！）</span>
+                <!-- 階段 C 新增：小鎮裝潢快捷控制吧 (可快速開關小鎮擺設或重置位置) -->
+                <div class="sumikko-card-sm bg-[#FAF6F0] p-3 mb-3 flex flex-col gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-black text-[#5C4938]">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full bg-[#A8D8B9] border border-[#5C4938]">🛠️ 小鎮裝潢模式</span>
+                            <span id="town-life-summary">可直接拖曳地圖上的小夥伴、車車與設施擺放位置！</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="randomizeTownDecorPositions()" class="px-2.5 py-1 rounded-full bg-white border border-[#5C4938] text-[11px] font-black hover:bg-[#FCE8A6] transition">
+                                🎲 隨機趣味擺放
+                            </button>
+                            <button type="button" onclick="resetTownDecorPositions()" class="px-2.5 py-1 rounded-full bg-white border border-[#5C4938] text-[11px] font-black hover:bg-[#F9C5BD] transition">
+                                ↺ 恢復預設位置
+                            </button>
+                            <button type="button" onclick="switchTab('pokedex'); switchCollectionSubTab('townshop');" class="underline text-[#E87A64]">
+                                去商店解鎖更多 ➔
+                            </button>
+                        </div>
                     </div>
-                    <button type="button" onclick="switchTab('pokedex'); switchCollectionSubTab('mascots');" class="underline text-[#E87A64]">去圖鑑商店解鎖更多 ➔</button>
+                    <!-- 已解鎖小鎮裝飾物快速清單 -->
+                    <div id="map-decor-quickbar" class="flex items-center gap-2 overflow-x-auto py-1 text-xs"></div>
                 </div>
 
                 <!-- 拍立得外框全幅蝦米小鎮地圖容器 -->
@@ -1611,6 +1675,44 @@
                 <div id="modal-sticker-list" class="flex flex-wrap gap-2"></div>
             </div>
 
+            <!-- 3.5 階段 C 新增：蓋完食章前拍張美食拍立得照片 (記錄自己吃什麼 +50 蝦米幣) -->
+            <div class="sumikko-card-sm bg-[#FFFDF7] p-4 mb-4 border-dashed">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <div>
+                        <span class="text-sm font-black text-[#5C4938] flex items-center gap-1.5">
+                            <svg class="w-4 h-4 text-[#E87A64]" viewBox="0 0 20 20" fill="none">
+                                <rect x="2" y="5" width="16" height="12" rx="3" fill="#FCE8A6" stroke="#5C4938" stroke-width="1.8"/>
+                                <circle cx="10" cy="11" r="3.2" fill="#FFFFFF" stroke="#5C4938" stroke-width="1.6"/>
+                                <path d="M7 5L8.2 3H11.8L13 5" stroke="#5C4938" stroke-width="1.6" stroke-linejoin="round"/>
+                            </svg>
+                            <span>今日完食拍立得照片（記錄你吃了什麼！）</span>
+                        </span>
+                        <p class="text-[11px] font-bold text-[#857262] mt-0.5">上傳美食照片或產生手繪紀念卡，自動加蓋完食章並額外獲得 <strong class="text-[#E87A64]">+50 蝦米幣</strong>！</p>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        <label for="modal-photo-file" class="capsule-btn bg-[#FCE8A6] text-xs py-1.5 px-3 cursor-pointer">
+                            <span>📸 拍照 / 選相簿</span>
+                        </label>
+                        <input type="file" id="modal-photo-file" accept="image/*" class="hidden" onchange="handleModalPhotoUpload(event)">
+                        <button type="button" onclick="generateCuteFoodPolaroid()" class="capsule-btn bg-[#A8D8B9] text-xs py-1.5 px-3">
+                            <span>🎨 手繪美食卡</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 拍立得預覽區 -->
+                <div id="modal-photo-preview-wrap" class="hidden mt-3 flex flex-col items-center">
+                    <div class="polaroid-frame w-48 text-center">
+                        <div class="polaroid-tape"></div>
+                        <img id="modal-photo-preview-img" src="" alt="美食拍立得預覽" class="w-full h-32 object-cover rounded-lg border border-[#5C4938] bg-[#FAF6F0]">
+                        <div class="mt-1.5 flex items-center justify-between text-[10px] font-black text-[#857262] px-1">
+                            <span id="modal-photo-date-label">完食紀念</span>
+                            <button type="button" onclick="removeModalPhoto()" class="text-[#C45143] underline">移除照片</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 4. 私房美食小筆記 -->
             <div class="sumikko-card-sm bg-white p-4 mb-4">
                 <label for="modal-note-input" class="block text-sm font-black text-[#5C4938] mb-2">私房必點＆美食小筆記</label>
@@ -1714,7 +1816,11 @@
                         <span class="font-black text-[#E87A64]">+30 幣 / 間</span>
                     </div>
                     <div class="flex items-center justify-between bg-[#FAF6F0] px-3 py-1.5 rounded-xl border border-[#DFD5C6]">
-                        <span>4. 通報新增一間雲科私房好店</span>
+                        <span>4. 上傳完食拍立得照片記錄美食</span>
+                        <span class="font-black text-[#E87A64]">+50 幣 / 張</span>
+                    </div>
+                    <div class="flex items-center justify-between bg-[#FAF6F0] px-3 py-1.5 rounded-xl border border-[#DFD5C6]">
+                        <span>5. 通報新增一間雲科私房好店</span>
                         <span class="font-black text-[#E87A64]">+80 幣 / 間</span>
                     </div>
                 </div>
@@ -1934,9 +2040,12 @@
         let currentMoodIdx = 0;
 
         let stores = [];
+        let baseSheetStores = [];
         let isSpinning = false;
         let currentRotation = 0;
         let lastDrawnStoreName = null;
+        let pokedexFilterMode = 'all';
+        let activeCollectionSubTab = 'food';
 
         // 雲科生活圈中心座標與各商圈基準座標
         const YUNTECH_GATE_COORDS = { lat: 23.6960, lng: 120.5365 };
@@ -2101,6 +2210,46 @@
             }
         ];
 
+        // ==================== 階段 C 新增：蝦米小鎮景觀與遊樂場裝飾設施資料表 ====================
+        const TOWN_DECORATIONS = [
+            {
+                id: 'ferris_wheel',
+                name: '蝦米摩天輪遊樂場',
+                cost: 150,
+                defaultLat: 23.7005,
+                defaultLng: 120.5342,
+                desc: '小鎮最熱鬧的粉彩摩天輪！點擊小鎮上的摩天輪還可以直接進入蝦米遊樂場玩遊戲喔！',
+                svg: `<svg viewBox="0 0 64 64" class="w-14 h-14"><ellipse cx="32" cy="58" rx="22" ry="4" fill="#DFD5C6"/><circle cx="32" cy="28" r="19" stroke="#5C4938" stroke-width="2.4" stroke-dasharray="5 3" fill="none"/><path d="M20 56L32 28L44 56" stroke="#5C4938" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="28" r="6" fill="#FCE8A6" stroke="#5C4938" stroke-width="2.2"/><circle cx="32" cy="9" r="4.5" fill="#F9C5BD" stroke="#5C4938" stroke-width="1.8"/><circle cx="51" cy="28" r="4.5" fill="#A8D8B9" stroke="#5C4938" stroke-width="1.8"/><circle cx="13" cy="28" r="4.5" fill="#BBE2F2" stroke="#5C4938" stroke-width="1.8"/><circle cx="32" cy="47" r="4.5" fill="#D9C8EC" stroke="#5C4938" stroke-width="1.8"/></svg>`
+            },
+            {
+                id: 'picnic_mat',
+                name: '格紋野餐小天地',
+                cost: 90,
+                defaultLat: 23.6932,
+                defaultLng: 120.5328,
+                desc: '鋪在草地上的紅白格紋野餐墊，上面擺著剛炸好的天婦羅便當與熱茶！',
+                svg: `<svg viewBox="0 0 64 56" class="w-14 h-12"><path d="M8 34L22 18H46L56 34L42 46H16L8 34Z" fill="#F9C5BD" stroke="#5C4938" stroke-width="2.2" stroke-linejoin="round"/><path d="M15 26H51M12 34H54M26 18L18 44M38 18L34 45" stroke="#FFFFFF" stroke-width="2"/><rect x="24" y="22" width="16" height="12" rx="3" fill="#FCE8A6" stroke="#5C4938" stroke-width="2"/><circle cx="30" cy="28" r="2.5" fill="#E87A64"/><circle cx="36" cy="28" r="2.5" fill="#A8D8B9"/></svg>`
+            },
+            {
+                id: 'boba_fountain',
+                name: '黑糖珍奶噴水池',
+                cost: 160,
+                defaultLat: 23.6982,
+                defaultLng: 120.5408,
+                desc: '源源不絕湧出香濃奶茶與Q彈珍珠的夢幻廣場噴水池！',
+                svg: `<svg viewBox="0 0 64 60" class="w-14 h-14"><ellipse cx="32" cy="48" rx="24" ry="8" fill="#FFFDF9" stroke="#5C4938" stroke-width="2.2"/><ellipse cx="32" cy="47" rx="20" ry="5.5" fill="#F3D39A"/><path d="M26 24H38L36 46H28L26 24Z" fill="#F9C5BD" stroke="#5C4938" stroke-width="2"/><path d="M32 24C24 12 16 18 18 28M32 24C40 12 48 18 46 28" stroke="#BBE2F2" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="24" cy="47" r="2.2" fill="#5C4938"/><circle cx="32" cy="49" r="2.2" fill="#5C4938"/><circle cx="39" cy="46" r="2.2" fill="#5C4938"/></svg>`
+            },
+            {
+                id: 'yatai_cart',
+                name: '暖簾章魚燒屋台',
+                cost: 140,
+                defaultLat: 23.7062,
+                defaultLng: 120.5372,
+                desc: '掛著紅色小燈籠的木造關東煮與章魚燒攤車，宵夜時段最溫暖的角落！',
+                svg: `<svg viewBox="0 0 64 60" class="w-14 h-14"><ellipse cx="32" cy="54" rx="22" ry="4" fill="#DFD5C6"/><rect x="14" y="24" width="36" height="24" rx="2" fill="#F3D39A" stroke="#5C4938" stroke-width="2.2"/><path d="M10 24L18 12H46L54 24H10Z" fill="#E87A64" stroke="#5C4938" stroke-width="2.2" stroke-linejoin="round"/><rect x="18" y="24" width="8" height="9" fill="#FFFDF9" stroke="#5C4938" stroke-width="1.6"/><rect x="28" y="24" width="8" height="9" fill="#FFFDF9" stroke="#5C4938" stroke-width="1.6"/><rect x="38" y="24" width="8" height="9" fill="#FFFDF9" stroke="#5C4938" stroke-width="1.6"/><circle cx="22" cy="50" r="5" fill="#5C4938"/><circle cx="42" cy="50" r="5" fill="#5C4938"/></svg>`
+            }
+        ];
+
         // ==================== 階段 B：雲科店名填空大猜謎題庫 ====================
         const YUNTECH_QUIZ_BANK = [
             { prefix: "阿琴", blank: "火雞肉飯", suffix: "", hint: "提示：雲科周邊超人氣老店！學生最愛點它的噴水雞絲飯與魯肉飯～", options: ["火雞肉飯", "自助餐", "牛肉麵", "臭豆腐"] },
@@ -2120,10 +2269,7 @@
         let storeReviews = {};
         let hiddenTodayStores = [];
         let customAddedStores = [];
-        let baseSheetStores = [];
-        let pokedexFilterMode = 'all';
-        let activeCollectionSubTab = 'food';
-        // 階段 B：解鎖與裝扮狀態 (vehicles 與 mascots 皆會實際出現在小鎮地圖中！)
+        // 階段 B + C：解鎖與裝扮狀態 (vehicles、mascots 與 decors 皆會實際出現在小鎮地圖中！)
         let unlockState = {
             mascots: ['shrimp', 'rice'],
             companion: 'shrimp',
@@ -2131,6 +2277,9 @@
             activeHouseSkin: 'classic',
             vehicles: ['shrimp_car'], // 預設贈送一台黃金炸蝦噗噗車在小鎮路上跑！
             activeVehiclesOnMap: ['shrimp_car'],
+            decors: ['ferris_wheel'], // 預設在小鎮蓋好一座「蝦米摩天輪遊樂場」！
+            activeDecorsOnMap: ['ferris_wheel'],
+            townAtmosphere: 'day', // 'day' | 'sunset' | 'night'
             customTownPositions: {} // 儲存使用者在小鎮地圖拖曳擺放的座標
         };
 
@@ -2144,7 +2293,7 @@
 
         // Modal 編輯暫存狀態
         let activeModalStoreName = null;
-        let modalTempState = { rating: 0, tags: [], note: '', orderLink: '', stamped: false, fav: false };
+        let modalTempState = { rating: 0, tags: [], note: '', orderLink: '', photoData: '', photoDate: '', stamped: false, fav: false };
         let customModalSelectedMeals = ['午餐', '晚餐'];
 
         // 篩選條件狀態
@@ -2188,11 +2337,18 @@
                         activeHouseSkin: parsedU.activeHouseSkin || 'classic',
                         vehicles: Array.isArray(parsedU.vehicles) && parsedU.vehicles.length ? parsedU.vehicles.filter(v => v !== 'walk') : ['shrimp_car'],
                         activeVehiclesOnMap: Array.isArray(parsedU.activeVehiclesOnMap) ? parsedU.activeVehiclesOnMap : ['shrimp_car'],
+                        decors: Array.isArray(parsedU.decors) && parsedU.decors.length ? parsedU.decors : ['ferris_wheel'],
+                        activeDecorsOnMap: Array.isArray(parsedU.activeDecorsOnMap) ? parsedU.activeDecorsOnMap : ['ferris_wheel'],
+                        townAtmosphere: parsedU.townAtmosphere || 'day',
                         customTownPositions: parsedU.customTownPositions || {}
                     };
                     if (unlockState.vehicles.length === 0) {
                         unlockState.vehicles = ['shrimp_car'];
                         unlockState.activeVehiclesOnMap = ['shrimp_car'];
+                    }
+                    if (!unlockState.decors || unlockState.decors.length === 0) {
+                        unlockState.decors = ['ferris_wheel'];
+                        unlockState.activeDecorsOnMap = ['ferris_wheel'];
                     }
                 }
             } catch (e) {
@@ -3263,6 +3419,15 @@
                         <div class="mt-2 text-xs font-bold text-[#5C4938] bg-[#FAF6F0] p-2.5 rounded-xl border border-[#DFD5C6]">
                             私房筆記：「${review.note}」
                         </div>` : ''}
+
+                        ${review.photoData ? `
+                        <div class="mt-3 flex justify-center sm:justify-start">
+                            <div class="polaroid-frame w-48 text-center">
+                                <div class="polaroid-tape"></div>
+                                <img src="${review.photoData}" alt="${pick.name} 完食拍立得" class="w-full h-28 object-cover rounded-lg border border-[#5C4938]">
+                                <div class="mt-1 text-[10px] font-black text-[#5C4938]">📸 完食紀念 · ${review.photoDate || '美味回憶'}</div>
+                            </div>
+                        </div>` : ''}
                     </div>
 
                     <!-- 營業資訊手繪格 -->
@@ -3892,15 +4057,189 @@
                 }
             });
 
-            // 更新小鎮生活狀態文字
+            // 3. 階段 C 新增：渲染所有已解鎖並啟用的「小鎮景觀與遊樂場設施」
+            const activeDecors = (unlockState.activeDecorsOnMap && unlockState.activeDecorsOnMap.length)
+                ? unlockState.activeDecorsOnMap.filter(dId => (unlockState.decors || []).includes(dId))
+                : (unlockState.decors || ['ferris_wheel']);
+
+            activeDecors.forEach(dId => {
+                const dObj = TOWN_DECORATIONS.find(d => d.id === dId);
+                if (!dObj) return;
+
+                const savedPos = unlockState.customTownPositions[`decor_${dId}`];
+                const dLat = savedPos ? savedPos.lat : dObj.defaultLat;
+                const dLng = savedPos ? savedPos.lng : dObj.defaultLng;
+
+                const decorIcon = L.divIcon({
+                    className: 'custom-town-decor',
+                    iconSize: [64, 64],
+                    iconAnchor: [32, 54],
+                    popupAnchor: [0, -48],
+                    html: `
+                        <div class="relative flex flex-col items-center cursor-grab active:cursor-grabbing group">
+                            <div class="px-2 py-0.2 rounded-full bg-[#A8D8B9] border-2 border-[#5C4938] text-[10px] font-black text-[#5C4938] whitespace-nowrap shadow-xs -mb-1.5 z-10">
+                                🎡 ${dObj.name}
+                            </div>
+                            <div class="drop-shadow-[0_3px_0_#5C4938] transition-transform group-hover:scale-110">
+                                ${dObj.svg}
+                            </div>
+                        </div>
+                    `
+                });
+
+                const dMarker = L.marker([dLat, dLng], {
+                    icon: decorIcon,
+                    draggable: allowDrag,
+                    zIndexOffset: 680
+                }).addTo(targetLayer);
+
+                dMarker.bindPopup(`
+                    <div class="p-1.5 text-center min-w-[175px]">
+                        <span class="px-2 py-0.5 rounded-full bg-[#A8D8B9] border border-[#5C4938] text-[10px] font-black">小鎮特色景觀</span>
+                        <div class="font-hand font-black text-base text-[#5C4938] mt-1">${dObj.name}</div>
+                        <p class="text-[11px] font-bold text-[#857262] my-1">${dObj.desc}</p>
+                        ${dId === 'ferris_wheel' ? `
+                            <button type="button" onclick="switchTab('arcade')" class="mt-1 w-full px-3 py-1 rounded-full bg-[#FCE8A6] border-2 border-[#5C4938] text-xs font-black hover:bg-[#F7A072] hover:text-white transition">
+                                🎮 進入蝦米遊樂場玩遊戲！
+                            </button>
+                        ` : `
+                            <div class="text-[10px] font-black text-[#E87A64] bg-[#FAF6F0] rounded-lg py-1 px-2 border border-[#DFD5C6]">
+                                🛠️ 可直接拖曳我擺放到喜歡的位置！
+                            </div>
+                        `}
+                    </div>
+                `);
+
+                if (allowDrag) {
+                    dMarker.on('dragend', (e) => {
+                        const newLatLng = e.target.getLatLng();
+                        unlockState.customTownPositions[`decor_${dId}`] = { lat: newLatLng.lat, lng: newLatLng.lng };
+                        saveUnlocksToStorage();
+                        showSumikkoToast(`已將「${dObj.name}」擺放到小鎮新位置！`);
+                    });
+                }
+            });
+
+            // 更新小鎮生活狀態文字與裝潢快捷列
             const summaryEl = document.getElementById('town-life-summary');
             if (summaryEl) {
-                summaryEl.textContent = `小鎮內目前有 ${unlockState.mascots.length} 位吉祥物小夥伴與 ${activeVehicles.length} 台交通工具（可直接拖曳擺放他們的位置！）`;
+                summaryEl.textContent = `小鎮內目前有 ${unlockState.mascots.length} 位小夥伴、${activeVehicles.length} 台車車與 ${activeDecors.length} 座景觀設施（皆可直接拖曳擺放！）`;
             }
+            renderMapDecorQuickbar();
 
             if (allowDrag && isTownCruiseRunning && townVehicleMarkers.length > 0) {
                 startTownCruiseAnimation();
             }
+        }
+
+        // 階段 C 新增：小鎮地圖上方的快速裝潢切換列、隨機擺放與日夜氛圍切換
+        function renderMapDecorQuickbar() {
+            const bar = document.getElementById('map-decor-quickbar');
+            if (!bar) return;
+
+            let html = '';
+            // 顯示已解鎖的景觀設施開關
+            (unlockState.decors || ['ferris_wheel']).forEach(dId => {
+                const dObj = TOWN_DECORATIONS.find(d => d.id === dId);
+                if (!dObj) return;
+                const isOn = (unlockState.activeDecorsOnMap || []).includes(dId);
+                html += `
+                    <button type="button" onclick="toggleDecorOnMapQuick('${dId}')"
+                        class="px-2.5 py-1 rounded-full border-2 border-[#5C4938] font-black whitespace-nowrap flex items-center gap-1 transition ${isOn ? 'bg-[#FCE8A6]' : 'bg-white opacity-65'}">
+                        <span>🎡 ${dObj.name}</span>
+                        <span class="text-[10px]">${isOn ? '顯示中' : '已收起'}</span>
+                    </button>
+                `;
+            });
+
+            // 顯示已解鎖的交通工具開關
+            (unlockState.vehicles || ['shrimp_car']).forEach(vId => {
+                const vObj = TOWN_VEHICLES.find(v => v.id === vId);
+                if (!vObj) return;
+                const isOn = (unlockState.activeVehiclesOnMap || []).includes(vId);
+                html += `
+                    <button type="button" onclick="buyOrEquipVehicle('${vId}'); initOrUpdateFullMap();"
+                        class="px-2.5 py-1 rounded-full border-2 border-[#5C4938] font-black whitespace-nowrap flex items-center gap-1 transition ${isOn ? 'bg-[#F9C5BD]' : 'bg-white opacity-65'}">
+                        <span>🚗 ${vObj.name}</span>
+                        <span class="text-[10px]">${isOn ? '巡遊中' : '已收起'}</span>
+                    </button>
+                `;
+            });
+
+            bar.innerHTML = html;
+        }
+
+        function toggleDecorOnMapQuick(decorId) {
+            if (!Array.isArray(unlockState.activeDecorsOnMap)) {
+                unlockState.activeDecorsOnMap = [...(unlockState.decors || ['ferris_wheel'])];
+            }
+            const idx = unlockState.activeDecorsOnMap.indexOf(decorId);
+            const dObj = TOWN_DECORATIONS.find(d => d.id === decorId);
+            if (idx >= 0) {
+                unlockState.activeDecorsOnMap.splice(idx, 1);
+                if (dObj) showSumikkoToast(`已將「${dObj.name}」暫時收進倉庫`);
+            } else {
+                unlockState.activeDecorsOnMap.push(decorId);
+                if (dObj) showSumikkoToast(`已將「${dObj.name}」擺進蝦米小鎮！`);
+            }
+            saveUnlocksToStorage();
+            initOrUpdateFullMap();
+        }
+
+        function randomizeTownDecorPositions() {
+            unlockState.mascots.forEach(mId => {
+                unlockState.customTownPositions[`mascot_${mId}`] = {
+                    lat: 23.6920 + Math.random() * 0.0170,
+                    lng: 120.5315 + Math.random() * 0.0135
+                };
+            });
+            (unlockState.decors || []).forEach(dId => {
+                unlockState.customTownPositions[`decor_${dId}`] = {
+                    lat: 23.6925 + Math.random() * 0.0160,
+                    lng: 120.5320 + Math.random() * 0.0130
+                };
+            });
+            saveUnlocksToStorage();
+            initOrUpdateFullMap();
+            showSumikkoToast('🎲 阿蝦與小夥伴們在小鎮裡換了新角落散步囉！');
+        }
+
+        function resetTownDecorPositions() {
+            unlockState.customTownPositions = {};
+            saveUnlocksToStorage();
+            initOrUpdateFullMap();
+            showSumikkoToast('已將小鎮上的小夥伴與設施恢復到預設位置！');
+        }
+
+        function cycleTownAtmosphere() {
+            const modes = ['day', 'sunset', 'night'];
+            const labels = {
+                day: '🌤️ 暖陽白天',
+                sunset: '🌇 焦糖夕陽',
+                night: '🌙 星光宵夜'
+            };
+            const curIdx = modes.indexOf(unlockState.townAtmosphere || 'day');
+            const nextMode = modes[(curIdx + 1) % modes.length];
+            unlockState.townAtmosphere = nextMode;
+            saveUnlocksToStorage();
+            applyTownAtmosphereUI();
+            showSumikkoToast(`小鎮時光已切換為「${labels[nextMode]}」！`);
+        }
+
+        function applyTownAtmosphereUI() {
+            const mapEl = document.getElementById('full-explore-map');
+            const btnText = document.getElementById('btn-town-time-text');
+            const mode = unlockState.townAtmosphere || 'day';
+            const labels = {
+                day: '🌤️ 暖陽白天',
+                sunset: '🌇 焦糖夕陽',
+                night: '🌙 星光宵夜'
+            };
+            if (btnText) btnText.textContent = labels[mode] || labels.day;
+            if (!mapEl) return;
+            mapEl.classList.remove('town-time-sunset', 'town-time-night');
+            if (mode === 'sunset') mapEl.classList.add('town-time-sunset');
+            if (mode === 'night') mapEl.classList.add('town-time-night');
         }
 
         function startTownCruiseAnimation() {
@@ -4032,13 +4371,187 @@
             // 將所有解鎖的吉祥物與交通工具放進蝦米小鎮地圖中！
             renderTownMascotsAndVehicles(fullMapInstance, townLifeLayer, true);
             updateCruiseButtonUI();
+            applyTownAtmosphereUI();
 
             if (selectedMarker) {
                 selectedMarker.openPopup();
             }
 
             const countText = document.getElementById('full-map-count-text');
-            if (countText) countText.textContent = `蝦米小鎮上共有 ${validCount} 間美食小屋、${unlockState.mascots.length} 位小夥伴與 ${unlockState.vehicles.length} 台車車`;
+            if (countText) countText.textContent = `蝦米小鎮上共有 ${validCount} 間美食小屋、${unlockState.mascots.length} 位小夥伴與 ${(unlockState.decors || []).length} 座設施`;
+        }
+        // ==================== 功能 2：蝦米美味評鑑 ＆ 完食印章 Modal (含階段 C 美食拍立得照片上傳) ====================
+        function openReviewModal(storeName) {
+            activeModalStoreName = storeName;
+            const storeObj = stores.find(s => s.name === storeName);
+            const existing = storeReviews[storeName] || { rating: 0, tags: [], note: '', orderLink: '', photoData: '', photoDate: '', stamped: false };
+            const defaultOrder = existing.orderLink || (storeObj ? getStoreOrderLink(storeObj) : '');
+
+            modalTempState = {
+                rating: existing.rating || 0,
+                tags: Array.isArray(existing.tags) ? [...existing.tags] : [],
+                note: existing.note || '',
+                orderLink: defaultOrder,
+                photoData: existing.photoData || '',
+                photoDate: existing.photoDate || '',
+                stamped: !!existing.stamped,
+                fav: favoriteStores.includes(storeName)
+            };
+
+            document.getElementById('modal-store-name').textContent = storeName;
+            document.getElementById('modal-note-input').value = modalTempState.note;
+            const orderInput = document.getElementById('modal-order-link-input');
+            if (orderInput) orderInput.value = modalTempState.orderLink;
+            const fileInput = document.getElementById('modal-photo-file');
+            if (fileInput) fileInput.value = '';
+
+            renderModalControls();
+            renderModalPhotoPreview();
+
+            const modal = document.getElementById('review-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // 階段 C 新增：渲染評鑑彈窗內的拍立得照片預覽
+        function renderModalPhotoPreview() {
+            const wrap = document.getElementById('modal-photo-preview-wrap');
+            const img = document.getElementById('modal-photo-preview-img');
+            const dateLabel = document.getElementById('modal-photo-date-label');
+            if (!wrap || !img) return;
+
+            if (modalTempState.photoData) {
+                wrap.classList.remove('hidden');
+                img.src = modalTempState.photoData;
+                if (dateLabel) dateLabel.textContent = `📸 完食日：${modalTempState.photoDate || new Date().toISOString().slice(0, 10)}`;
+            } else {
+                wrap.classList.add('hidden');
+                img.src = '';
+            }
+        }
+
+        // 處理使用者拍照或選擇相簿圖片，透過 Canvas 自動壓縮為輕量拍立得尺寸
+        function handleModalPhotoUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const tempImg = new Image();
+                tempImg.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxW = 420;
+                    const maxH = 320;
+                    let w = tempImg.width;
+                    let h = tempImg.height;
+                    if (w > maxW || h > maxH) {
+                        const ratio = Math.min(maxW / w, maxH / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(tempImg, 0, 0, w, h);
+
+                    modalTempState.photoData = canvas.toDataURL('image/jpeg', 0.72);
+                    modalTempState.photoDate = new Date().toISOString().slice(0, 10);
+                    modalTempState.stamped = true; // 上傳美食照自動蓋上完食章！
+                    if (modalTempState.rating === 0) modalTempState.rating = 5;
+
+                    renderModalControls();
+                    renderModalPhotoPreview();
+                    showSumikkoToast('已套用美食拍立得相框！儲存後可領取 +50 蝦米幣喔！');
+                };
+                tempImg.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 若使用者手邊沒照片，可一鍵產生「阿蝦與米米手繪美食紀念拍立得」
+        function generateCuteFoodPolaroid() {
+            const storeName = activeModalStoreName || '雲科美味好店';
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 280;
+            const ctx = canvas.getContext('2d');
+
+            // 溫暖奶油格紋背景
+            ctx.fillStyle = '#FFF9E6';
+            ctx.fillRect(0, 0, 400, 280);
+            ctx.strokeStyle = '#F3ECE1';
+            ctx.lineWidth = 2;
+            for (let x = 0; x < 400; x += 24) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 280); ctx.stroke();
+            }
+            for (let y = 0; y < 280; y += 24) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(400, y); ctx.stroke();
+            }
+
+            // 畫一個大餐盤與炸蝦飯糰大餐
+            ctx.fillStyle = '#FFFFFF';
+            ctx.strokeStyle = '#5C4938';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.ellipse(200, 155, 125, 72, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 餐盤裡的阿蝦與米米飯糰
+            ctx.fillStyle = '#F3D39A';
+            ctx.beginPath();
+            ctx.ellipse(165, 145, 38, 26, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#E87A64';
+            ctx.beginPath();
+            ctx.arc(130, 132, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(235, 148, 32, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#5C4938';
+            ctx.fillRect(221, 158, 28, 18);
+
+            // 豆豆眼
+            ctx.beginPath();
+            ctx.arc(158, 142, 3, 0, Math.PI * 2);
+            ctx.arc(176, 142, 3, 0, Math.PI * 2);
+            ctx.arc(225, 145, 3, 0, Math.PI * 2);
+            ctx.arc(245, 145, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 頂部店名紀念字樣
+            ctx.fillStyle = '#5C4938';
+            ctx.font = '900 22px "Zen Maru Gothic", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`🍴 ${storeName}`, 200, 50);
+
+            ctx.fillStyle = '#E87A64';
+            ctx.font = '700 14px "Zen Maru Gothic", sans-serif';
+            ctx.fillText(`呷蝦米完食認證 · ${todayStr}`, 200, 255);
+
+            modalTempState.photoData = canvas.toDataURL('image/jpeg', 0.82);
+            modalTempState.photoDate = todayStr;
+            modalTempState.stamped = true;
+            if (modalTempState.rating === 0) modalTempState.rating = 5;
+
+            renderModalControls();
+            renderModalPhotoPreview();
+            showSumikkoToast('已產生阿蝦米米手繪美食拍立得！');
+        }
+
+        function removeModalPhoto() {
+            modalTempState.photoData = '';
+            modalTempState.photoDate = '';
+            renderModalPhotoPreview();
         }
 
         function centerMapOnYunTech() {
@@ -4192,34 +4705,6 @@
             }
         }
 
-        // ==================== 功能 2：蝦米美味評鑑 ＆ 完食印章 Modal ====================
-        function openReviewModal(storeName) {
-            activeModalStoreName = storeName;
-            const storeObj = stores.find(s => s.name === storeName);
-            const existing = storeReviews[storeName] || { rating: 0, tags: [], note: '', orderLink: '', stamped: false };
-            const defaultOrder = existing.orderLink || (storeObj ? getStoreOrderLink(storeObj) : '');
-
-            modalTempState = {
-                rating: existing.rating || 0,
-                tags: Array.isArray(existing.tags) ? [...existing.tags] : [],
-                note: existing.note || '',
-                orderLink: defaultOrder,
-                stamped: !!existing.stamped,
-                fav: favoriteStores.includes(storeName)
-            };
-
-            document.getElementById('modal-store-name').textContent = storeName;
-            document.getElementById('modal-note-input').value = modalTempState.note;
-            const orderInput = document.getElementById('modal-order-link-input');
-            if (orderInput) orderInput.value = modalTempState.orderLink;
-
-            renderModalControls();
-
-            const modal = document.getElementById('review-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
         function closeReviewModal() {
             const modal = document.getElementById('review-modal');
             modal.classList.add('hidden');
@@ -4329,12 +4814,15 @@
 
             const prevReview = storeReviews[activeModalStoreName];
             const isFirstTimeStampedOrReviewed = !prevReview || (!prevReview.stamped && !prevReview.note && !prevReview.rating);
+            const isFirstTimePhoto = (!prevReview || !prevReview.photoData) && !!modalTempState.photoData;
 
             storeReviews[activeModalStoreName] = {
                 rating: modalTempState.rating,
                 tags: modalTempState.tags,
                 note: noteVal,
                 orderLink: orderLinkVal,
+                photoData: modalTempState.photoData || '',
+                photoDate: modalTempState.photoDate || new Date().toISOString().slice(0, 10),
                 stamped: modalTempState.stamped,
                 updatedAt: new Date().toISOString().slice(0, 10)
             };
@@ -4352,7 +4840,13 @@
             const savedName = activeModalStoreName;
             closeReviewModal();
 
-            if (isFirstTimeStampedOrReviewed) {
+            if (isFirstTimePhoto && isFirstTimeStampedOrReviewed) {
+                addShiamiCoins(80, `上傳「${savedName}」完食拍立得＋完成評鑑！`);
+                firePastelConfetti();
+            } else if (isFirstTimePhoto) {
+                addShiamiCoins(50, `上傳「${savedName}」的完食拍立得照片！`);
+                firePastelConfetti();
+            } else if (isFirstTimeStampedOrReviewed) {
                 addShiamiCoins(30, `完成「${savedName}」的蝦米美味評鑑！`);
             } else {
                 showSumikkoToast(`已更新「${savedName}」的蝦米美食筆記！`);
@@ -4424,9 +4918,11 @@
             const list = stores.filter(s => {
                 const rev = storeReviews[s.name] || {};
                 const isStamped = !!rev.stamped;
+                const hasPhoto = !!rev.photoData;
                 const isFav = favoriteStores.includes(s.name);
 
                 if (pokedexFilterMode === 'stamped' && !isStamped) return false;
+                if (pokedexFilterMode === 'photo' && !hasPhoto) return false;
                 if (pokedexFilterMode === 'unstamped' && isStamped) return false;
                 if (pokedexFilterMode === 'fav' && !isFav) return false;
                 if (pokedexFilterMode === 'custom' && !s.isCustom) return false;
@@ -4479,6 +4975,13 @@
                             ${(rev.tags && rev.tags.length > 0) ? `
                             <div class="flex flex-wrap gap-1 mt-2">
                                 ${rev.tags.map(t => `<span class="px-2 py-0.5 rounded-full bg-[#FCE8A6] border border-[#5C4938] text-[10px] font-black">#${t}</span>`).join('')}
+                            </div>` : ''}
+
+                            ${rev.photoData ? `
+                            <div class="mt-3 polaroid-frame">
+                                <div class="polaroid-tape"></div>
+                                <img src="${rev.photoData}" alt="${s.name} 拍立得" class="w-full h-28 object-cover rounded-lg border border-[#5C4938]">
+                                <div class="mt-1 text-[10px] font-black text-[#857262] text-center">📸 完食日：${rev.photoDate || '美味回憶'}</div>
                             </div>` : ''}
 
                             ${rev.note ? `<p class="mt-2 text-xs font-bold text-[#5C4938] bg-[#FAF6F0] p-2 rounded-lg border border-[#DFD5C6] line-clamp-2">「${rev.note}」</p>` : ''}
@@ -4634,6 +5137,30 @@
                     </div>
                 `;
             }).join('');
+
+            // 階段 C 新增：渲染小鎮景觀與遊樂場裝飾設施商店
+            const decorsGrid = document.getElementById('shop-decors-grid');
+            if (decorsGrid) {
+                decorsGrid.innerHTML = TOWN_DECORATIONS.map(d => {
+                    const owned = (unlockState.decors || ['ferris_wheel']).includes(d.id);
+                    const onMap = (unlockState.activeDecorsOnMap || ['ferris_wheel']).includes(d.id);
+                    return `
+                        <div class="sumikko-card-sm ${onMap ? 'bg-[#FFFDF7]' : 'bg-white'} p-4 flex flex-col justify-between gap-3 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="w-16 h-16 rounded-2xl bg-[#FAF6F0] border-2 border-[#5C4938] flex items-center justify-center mb-2">
+                                    ${d.svg}
+                                </div>
+                                <h4 class="font-hand text-base font-black text-[#5C4938]">${d.name}</h4>
+                                <p class="text-xs font-bold text-[#857262] mt-1">${d.desc}</p>
+                            </div>
+                            <button type="button" onclick="buyOrEquipTownDecor('${d.id}')"
+                                class="capsule-btn w-full text-xs py-1.5 ${onMap ? 'bg-[#A8D8B9]' : (owned ? 'bg-white' : 'bg-[#FCE8A6]')}">
+                                <span>${!owned ? `購買 (${d.cost} 幣)` : (onMap ? '小鎮擺設中 (點我收起)' : '擺進蝦米小鎮')}</span>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
         function buyOrEquipHouseSkin(skinId) {
@@ -4641,29 +5168,29 @@
             if (!skin) return;
             if (!unlockState.houseSkins.includes(skinId)) {
                 if (economyState.coins < skin.cost) {
-                    showSumikkoToast(`蝦米幣不足喔！（需要 ${skin.cost} 枚）`);
+                    showSumikkoToast(`蝦米幣不足喔！（需要 ${skin.cost} 枚，可去遊樂場或拍美食照賺幣）`);
                     return;
                 }
                 economyState.coins -= skin.cost;
                 unlockState.houseSkins.push(skinId);
                 saveEconomyToStorage();
+                firePastelConfetti();
             }
             unlockState.activeHouseSkin = skinId;
             saveUnlocksToStorage();
             renderTownShopSubTab();
-            showSumikkoToast(`已將小鎮店屋換成「${skin.name}」！快去小鎮地圖看看吧～`);
+            showSumikkoToast(`已將小鎮店屋換成「${skin.name}」造型！`);
         }
 
         function buyOrEquipVehicle(vehicleId) {
             const v = TOWN_VEHICLES.find(x => x.id === vehicleId);
             if (!v) return;
-            if (!Array.isArray(unlockState.activeVehiclesOnMap)) {
-                unlockState.activeVehiclesOnMap = [...unlockState.vehicles];
-            }
+            if (!Array.isArray(unlockState.vehicles)) unlockState.vehicles = ['shrimp_car'];
+            if (!Array.isArray(unlockState.activeVehiclesOnMap)) unlockState.activeVehiclesOnMap = [...unlockState.vehicles];
 
             if (!unlockState.vehicles.includes(vehicleId)) {
                 if (economyState.coins < v.cost) {
-                    showSumikkoToast(`蝦米幣不足喔！（需要 ${v.cost} 枚）`);
+                    showSumikkoToast(`蝦米幣不足喔！（需要 ${v.cost} 枚，可去遊樂場或拍美食照賺幣）`);
                     return;
                 }
                 economyState.coins -= v.cost;
@@ -4679,14 +5206,49 @@
                 return;
             }
 
-            // 已擁有：切換是否派駐在小鎮地圖上
             const idx = unlockState.activeVehiclesOnMap.indexOf(vehicleId);
             if (idx >= 0) {
                 unlockState.activeVehiclesOnMap.splice(idx, 1);
-                showSumikkoToast(`已將「${v.name}」先收回車庫休息`);
+                showSumikkoToast(`已將「${v.name}」暫時收回車庫休息`);
             } else {
                 unlockState.activeVehiclesOnMap.push(vehicleId);
                 showSumikkoToast(`已派駐「${v.name}」到蝦米小鎮街道巡遊！`);
+            }
+            saveUnlocksToStorage();
+            renderTownShopSubTab();
+        }
+
+        function buyOrEquipTownDecor(decorId) {
+            const d = TOWN_DECORATIONS.find(x => x.id === decorId);
+            if (!d) return;
+            if (!Array.isArray(unlockState.decors)) unlockState.decors = ['ferris_wheel'];
+            if (!Array.isArray(unlockState.activeDecorsOnMap)) unlockState.activeDecorsOnMap = [...unlockState.decors];
+
+            if (!unlockState.decors.includes(decorId)) {
+                if (economyState.coins < d.cost) {
+                    showSumikkoToast(`蝦米幣不足喔！（需要 ${d.cost} 枚，可去遊樂場或拍美食照賺幣）`);
+                    return;
+                }
+                economyState.coins -= d.cost;
+                unlockState.decors.push(decorId);
+                if (!unlockState.activeDecorsOnMap.includes(decorId)) {
+                    unlockState.activeDecorsOnMap.push(decorId);
+                }
+                saveEconomyToStorage();
+                saveUnlocksToStorage();
+                renderTownShopSubTab();
+                firePastelConfetti();
+                showSumikkoToast(`購買成功！「${d.name}」已經擺進蝦米小鎮地圖囉！`);
+                return;
+            }
+
+            const idx = unlockState.activeDecorsOnMap.indexOf(decorId);
+            if (idx >= 0) {
+                unlockState.activeDecorsOnMap.splice(idx, 1);
+                showSumikkoToast(`已將「${d.name}」暫時收進小鎮倉庫`);
+            } else {
+                unlockState.activeDecorsOnMap.push(decorId);
+                showSumikkoToast(`已將「${d.name}」擺進蝦米小鎮！可去地圖拖曳位置喔～`);
             }
             saveUnlocksToStorage();
             renderTownShopSubTab();
